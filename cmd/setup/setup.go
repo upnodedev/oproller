@@ -24,17 +24,17 @@ func Cmd() *cobra.Command {
 			}
 
 			opGEth := "op-geth"
-			cmdInit := exec.Command("go", "work", "init", opGEth)
-			cmdInit.Dir = spaceName
-			if err := cmdInit.Run(); err != nil {
-				return err
-			}
-
 			opGEthPath := spaceName + "/" + opGEth
 			if _, err := git.PlainClone(opGEthPath, false, &git.CloneOptions{
 				URL:      config.OpGEthRepo,
 				Progress: os.Stdout,
 			}); err != nil {
+				return err
+			}
+
+			cmdInit := exec.Command("go", "work", "init", opGEth)
+			cmdInit.Dir = spaceName
+			if err := cmdInit.Run(); err != nil {
 				return err
 			}
 

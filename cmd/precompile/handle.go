@@ -1,7 +1,6 @@
 package precompile
 
 import (
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -70,7 +69,6 @@ func (h Handle) addMapItem(node ast.Node) bool {
 			value := valueSpec.Values[idx].(*ast.CompositeLit)
 			value.Elts = append(value.Elts, newItem)
 			valueSpec.Values[idx] = value
-			fmt.Println("valueSpec.Values[idx]", valueSpec.Values[idx])
 		}
 	}
 
