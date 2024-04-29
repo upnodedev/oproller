@@ -32,8 +32,37 @@ func Cmd() *cobra.Command {
 	}
 
 	precompileCmd.AddCommand(newCmd())
+	precompileCmd.AddCommand(buildCmd())
 
 	return precompileCmd
+}
+
+func buildCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "build",
+		Short: "Build precompile contract package",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if _, err := os.Stat("bin"); errors.Is(err, os.ErrNotExist) {
+				err := os.Mkdir("bin", os.ModePerm)
+				if err != nil {
+					return err
+				}
+			}
+
+			cmdBuild := exec.Command("make", "geth")
+			cmdBuild.Dir = "./op-geth"
+			if err := cmdBuild.Run(); err != nil {
+				return err
+			}
+
+			cmdCopy := exec.Command("cp", "./op-geth/build/bin/geth", "./bin/")
+			if err := cmdCopy.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
 
 func newCmd() *cobra.Command {

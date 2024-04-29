@@ -9,7 +9,7 @@ import (
 	"os/exec"
 )
 
-func Cmd() *cobra.Command {
+func InitiateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init [working_space]",
 		Short: "A CLI use to setup working space and clone op-geth into it",
@@ -42,4 +42,25 @@ func Cmd() *cobra.Command {
 		},
 	}
 
+}
+
+func ClearWorkspace() *cobra.Command {
+	return &cobra.Command{
+		Use:   "clear [working_space]",
+		Short: "A CLI use to clear working space",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			spaceName := args[0]
+			if _, err := os.Stat(spaceName); errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+
+			cmdRemove := exec.Command("rm", "-rf", spaceName)
+			if err := cmdRemove.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }

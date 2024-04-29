@@ -23,6 +23,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(version.Cmd())
-	rootCmd.AddCommand(setup.Cmd())
+	rootCmd.AddCommand(setup.InitiateCmd())
+	rootCmd.AddCommand(setup.ClearWorkspace())
 	rootCmd.AddCommand(precompile.Cmd())
 }
