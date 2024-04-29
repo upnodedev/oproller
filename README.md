@@ -30,7 +30,14 @@ oproller precompile new <precompile-name> <address-of-precompile>
 oproller precompile new my-precompile 0x123
 ```
 
+- Step3: Build the precompile. Ensure that you  go to the workspace directory
+```shell
+oproller precompile build
+```
+
+
 After that you are able to see the precompile file in the workspace directory. And then start developing your precompile.
 
 ### Note:
 Please do not edit the package name and the module of precompile file. It will be used to register into to the op-geth.
+
