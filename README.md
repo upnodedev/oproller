@@ -9,7 +9,7 @@ This is a simple tool to setup work spaces for development custom precompile and
 ## How to install
 
 - Clone this repository
-- Run `go install`
+- Run `make install`
 
 ## How to use
 
@@ -27,7 +27,7 @@ cd my-workspace
 oproller precompile new <precompile-name> <address-of-precompile>
 ```
 ```shell
-oproller precompile new my-precompile 0x123
+oproller precompile new my-precompile 0x1234
 ```
 
 - Step3: Build the precompile. Ensure that you  go to the workspace directory
@@ -37,6 +37,14 @@ oproller precompile build
 
 
 After that you are able to see the precompile file in the workspace directory. And then start developing your precompile.
+
+## Clear up the workspace
+```shell
+ oproller clear <workspace-name>
+```
+```shell
+ oproller clear my-workspace
+```
 
 ### Note:
 Please do not edit the package name and the module of precompile file. It will be used to register into to the op-geth.

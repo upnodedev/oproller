@@ -61,7 +61,7 @@ func (h Handle) addMapItem(node ast.Node) bool {
 		if name.Name == "PrecompiledContractsCancun" {
 			// Create a new map item
 			newItem := &ast.KeyValueExpr{
-				Key:   &ast.BasicLit{Value: "common.BytesToAddress([]byte{" + h.address + "})"},
+				Key:   &ast.BasicLit{Value: "common.HexToAddress(\"" + h.address + "\")"},
 				Value: &ast.BasicLit{Value: "&" + h.packageName + "." + h.structName + "{}"},
 			}
 

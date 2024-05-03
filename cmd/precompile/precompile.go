@@ -1,12 +1,15 @@
 package precompile
 
 import (
+	"encoding/hex"
 	"errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"os"
 	"os/exec"
+	"strings"
 	"text/template"
-	"unicode"
 )
 
 var precompileTemplate = `
@@ -71,18 +74,26 @@ func newCmd() *cobra.Command {
 		Short: "Register a precompile contract package",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			preCompileName := args[0]
-
-			runes := []rune(preCompileName)
-			if unicode.IsLetter(runes[0]) {
-				runes[0] = unicode.ToUpper(runes[0])
+			prefix := "0x"
+			preCompileName := strings.TrimSpace(args[0])
+			addrPreCompile := strings.TrimSpace(args[1])
+			if !strings.HasPrefix(addrPreCompile, prefix) {
+				return errors.New("address must start with 0x")
 			}
-			structName := string(runes)
+
+			if _, err := hex.DecodeString(strings.TrimPrefix(addrPreCompile, prefix)); err != nil {
+				return err
+			}
+
+			structName := strings.ReplaceAll(preCompileName, "-", " ")
+			structName = cases.Title(language.English, cases.NoLower).String(structName)
+			structName = strings.ReplaceAll(structName, " ", "")
+
 			data := struct {
 				PackageName string
 				StructName  string
 			}{
-				PackageName: preCompileName,
+				PackageName: strings.ToLower(structName),
 				StructName:  structName,
 			}
 
@@ -96,7 +107,7 @@ func newCmd() *cobra.Command {
 
 			// init go mod
 			if _, err := os.Stat(preCompileName + "/go.mod"); errors.Is(err, os.ErrNotExist) {
-				cmdInit := exec.Command("go", "mod", "init", preCompileName)
+				cmdInit := exec.Command("go", "mod", "init", data.PackageName)
 				cmdInit.Dir = preCompileName
 				if err := cmdInit.Run(); err != nil {
 					return err
@@ -124,7 +135,7 @@ func newCmd() *cobra.Command {
 				return err
 			}
 
-			h := NewHandle(args[1], data.StructName, data.PackageName)
+			h := NewHandle(addrPreCompile, data.StructName, data.PackageName)
 			if err := h.registerPrecompile("./op-geth"); err != nil {
 				return err
 			}

@@ -23,9 +23,11 @@ BUILD_FLAGS := -ldflags '$(ldflags)'
 # ---------------------------------------------------------------------------- #
 .PHONY: install
 install: go.sum ## Installs the roller binary
+	go mod tidy
 	go install -mod=readonly $(BUILD_FLAGS) .
 
 
 .PHONY: build
 build: ## Compiles the roller binary
+	go mod tidy
 	go build -o build/roller $(BUILD_FLAGS) .
