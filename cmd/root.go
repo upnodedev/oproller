@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"oproller/cmd/precompile"
+	"oproller/cmd/preinstall"
 	"oproller/cmd/setup"
 	"oproller/cmd/version"
 	"os"
@@ -26,4 +27,5 @@ func init() {
 	rootCmd.AddCommand(setup.InitiateCmd())
 	rootCmd.AddCommand(setup.ClearWorkspace())
 	rootCmd.AddCommand(precompile.Cmd())
+	rootCmd.AddCommand(preinstall.Cmd())
 }
