@@ -1,8 +1,8 @@
 package precompile
 
 import (
-	"encoding/hex"
 	"errors"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -80,9 +80,8 @@ func newCmd() *cobra.Command {
 			if !strings.HasPrefix(addrPreCompile, prefix) {
 				return errors.New("address must start with 0x")
 			}
-
-			if _, err := hex.DecodeString(strings.TrimPrefix(addrPreCompile, prefix)); err != nil {
-				return err
+			if !common.IsHexAddress(addrPreCompile) {
+				return errors.New("invalid address evm")
 			}
 
 			structName := strings.ReplaceAll(preCompileName, "-", " ")

@@ -1,11 +1,14 @@
 package preinstall
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"text/template"
@@ -45,29 +48,91 @@ func Cmd() *cobra.Command {
 		Short: "All commands related to preinstall contracts",
 	}
 
-	preinstallCmd.AddCommand(generatePreinstall())
+	preinstallCmd.AddCommand(createPreinstallCmd())
+	preinstallCmd.AddCommand(buildPreinstallCmd())
 	preinstallCmd.AddCommand(registerPreinstall())
+	preinstallCmd.AddCommand(runDevnet())
 
 	return preinstallCmd
 }
 
-func generatePreinstall() *cobra.Command {
+func createPreinstallCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "generate [name] [address] [hex_deployed_code]",
-		Short: "Generate preinstall contract",
-		Args:  cobra.ExactArgs(3),
+		Use:   "create [name]",
+		Short: "Create preinstall contract project by foundry",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			preInstallName := args[0]
+			preInstallName = strings.TrimSpace(preInstallName)
+
+			if _, err := os.Stat(preInstallName); errors.Is(err, os.ErrNotExist) {
+				err := os.Mkdir(preInstallName, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			}
+
+			argCmd := []string{"init", preInstallName}
+			cmdBuild := exec.Command("forge", argCmd...)
+			if err := cmdBuild.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+}
+
+func buildPreinstallCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "build",
+		Short: "Build preinstall contract package",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmdBuild := exec.Command("forge", "build")
+			if err := cmdBuild.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+}
+
+func registerPreinstall() *cobra.Command {
+	return &cobra.Command{
+		Use:   "register [address] [preinstall_contract]",
+		Short: "Register preinstall contract to optimism src",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefix := "0x"
-			preInstallName := args[0]
-			addrPreInstall := args[1]
-			hexDeployedCode := args[2]
+			addrPreInstall := args[0]
+			contractName := args[1]
+			arrayName := strings.Split(contractName, ":")
+			if len(arrayName) != 2 {
+				return errors.New("preinstall_contract must be in format [contract_file.sol]:[contact_name]")
+			}
+			preInstallName := arrayName[1]
+
 			if !strings.HasPrefix(addrPreInstall, prefix) {
 				return errors.New("address must start with 0x")
 			}
-			if !isValidHex(hexDeployedCode) {
-				return errors.New("hex_deployed_code must be a valid hexadecimal string")
+			if !common.IsHexAddress(addrPreInstall) {
+				return errors.New("invalid address evm")
 			}
-			preInstallName = strings.TrimSpace(preInstallName)
+
+			outPath := strings.ReplaceAll(contractName, ":", "/")
+			abiFile := "out/" + outPath + ".json"
+
+			dataAbi, err := os.ReadFile(abiFile)
+			if err != nil {
+				return err
+			}
+			var abiModel ABI
+			if err := json.Unmarshal(dataAbi, &abiModel); err != nil {
+				return err
+			}
+			hexDeployedCode := abiModel.DeployedBytecode.Object
+			hexDeployedCode = strings.TrimPrefix(hexDeployedCode, "0x")
 
 			data := struct {
 				Name            string
@@ -86,9 +151,9 @@ func generatePreinstall() *cobra.Command {
 				}
 			}
 
-			// create precompile.go
+			// create PreinstallsExtension.sol
 			t := template.Must(template.New("contract").Parse(preinstallsExtensionTemplate))
-			preCompileFile := data.Name + "/" + "PreinstallsExtension.sol"
+			preCompileFile := "PreinstallsExtension.sol"
 			outputFile, err := os.Create(preCompileFile)
 			if err != nil {
 				return err
@@ -101,37 +166,52 @@ func generatePreinstall() *cobra.Command {
 				return err
 			}
 
-			fmt.Println("Preinstall contract generate successfully! Please check the file at " + preCompileFile + " for more details.")
-
-			return nil
-		},
-	}
-}
-
-func registerPreinstall() *cobra.Command {
-	return &cobra.Command{
-		Use:   "register [path_to_preinstall_contract] [path_to_optimism]",
-		Short: "Register preinstall contract to optimism src",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			pathToContract := args[0]
-			pathToOptimism := args[1]
-			if !fileExists(pathToContract) {
-				return errors.New("path_to_preinstall_contract does not exist")
-			}
-
+			pathToOptimism := "../optimism"
 			pathToL2Genesis := pathToOptimism + "/packages/contracts-bedrock/scripts/L2Genesis.s.sol"
 			if !fileExists(pathToL2Genesis) {
 				return errors.New("path_to_optimism does not exist")
 			}
 
 			pathToLibrary := pathToOptimism + "/packages/contracts-bedrock/src/libraries"
-			if err := copyFile(pathToContract, pathToLibrary+"/PreinstallsExtension.sol"); err != nil {
+			if err := copyFile(preCompileFile, pathToLibrary+"/PreinstallsExtension.sol"); err != nil {
 				return err
 			}
 
 			if err := handleRegisterL2Genesis(pathToL2Genesis); err != nil {
 				return err
+			}
+
+			return nil
+		},
+	}
+}
+
+func runDevnet() *cobra.Command {
+	return &cobra.Command{
+		Use:   "devnet [up/down/clean]",
+		Short: "Run devnet for testing preinstall contract package",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			argCmd := args[0]
+			if argCmd != "up" && argCmd != "down" && argCmd != "clean" {
+				return errors.New("invalid command")
+			}
+			switch argCmd {
+			case "down":
+				cmdBuild := exec.Command("make", "devnet-down")
+				if err := cmdBuild.Run(); err != nil {
+					return err
+				}
+			case "clean":
+				cmdBuild := exec.Command("make", "devnet-clean")
+				if err := cmdBuild.Run(); err != nil {
+					return err
+				}
+			default:
+				cmdBuild := exec.Command("make", "devnet-up")
+				if err := cmdBuild.Run(); err != nil {
+					return err
+				}
 			}
 
 			return nil

@@ -7,17 +7,32 @@ import (
 	"oproller/config"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func InitiateCmd() *cobra.Command {
+func InitWS() *cobra.Command {
+	initCmd := &cobra.Command{
+		Use:   "init",
+		Short: "A CLI use to setup working space for precompile or preinstall",
+	}
+
+	initCmd.AddCommand(InitPrecompileWSCmd())
+	initCmd.AddCommand(InitPreinstallWs())
+
+	return initCmd
+}
+
+func InitPrecompileWSCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "init [working_space]",
+		Use:   "precompile [working_space]",
 		Short: "A CLI use to setup working space and clone op-geth into it",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			spaceName := args[0]
+			spaceName = strings.TrimSpace(spaceName)
+			spaceName = spaceName + "/precompile"
 			if _, err := os.Stat(spaceName); errors.Is(err, os.ErrNotExist) {
-				err := os.Mkdir(spaceName, os.ModePerm)
+				err := os.MkdirAll(spaceName, os.ModePerm)
 				if err != nil {
 					return err
 				}
@@ -42,6 +57,39 @@ func InitiateCmd() *cobra.Command {
 		},
 	}
 
+}
+
+func InitPreinstallWs() *cobra.Command {
+	return &cobra.Command{
+		Use:   "preinstall [working_space]",
+		Short: "A CLI use to setup working space for preinstall",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			spaceName := args[0]
+			spaceName = strings.TrimSpace(spaceName)
+			spaceName = spaceName + "/preinstall"
+			if _, err := os.Stat(spaceName); errors.Is(err, os.ErrNotExist) {
+				err := os.MkdirAll(spaceName, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			}
+
+			optimism := "optimism"
+			optimismPath := spaceName + "/" + optimism
+			if _, err := git.PlainClone(optimismPath, false, &git.CloneOptions{
+				URL:           config.OptimismRepo,
+				ReferenceName: "develop",
+				SingleBranch:  true,
+				Depth:         1,
+				Progress:      os.Stdout,
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
 
 func ClearWorkspace() *cobra.Command {

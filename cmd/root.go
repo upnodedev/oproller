@@ -24,7 +24,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(version.Cmd())
-	rootCmd.AddCommand(setup.InitiateCmd())
+	rootCmd.AddCommand(setup.InitWS())
 	rootCmd.AddCommand(setup.ClearWorkspace())
 	rootCmd.AddCommand(precompile.Cmd())
 	rootCmd.AddCommand(preinstall.Cmd())

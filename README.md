@@ -1,15 +1,27 @@
 # OP-Roller (oproller)
 
-This is a simple tool to setup work spaces for development custom precompile and predeploy from op-geth
+This is a simple tool to setup work spaces for development custom precompile and predeploy from op-geth/optimism.
 
 ## Requirements
 
 - Install go version 1.20 or higher
+[Install go](https://golang.org/doc/install)
+- Docker and docker-compose 
+[Install docker](https://docs.docker.com/get-docker/)
+- Install foundry
+[Install foundry](https://book.getfoundry.sh/getting-started/installation)
 
-## How to install
+## How to install oproller
 
 - Clone this repository
+```shell
+git clone https://github.com/johnyupnode/oproller.git
+```
 - Run `make install`
+```shell
+cd oproller
+make install
+```
 
 ## How to add new precompile
 
@@ -17,10 +29,18 @@ This is a simple tool to setup work spaces for development custom precompile and
 
 - Step1: Create new workspace
 ```shell
-oproller init <workspace-name>
+oproller init precompile <workspace-name>
 ```
 ```shell
-oproller init my-workspace
+oproller init precompile my-workspace
+```
+After that you will see the workspace directory in the current directory. The structure of the workspace directory is as below:
+```
+my-workspace:
+    - precompile
+        - op-geth
+            - ...
+        - go.work
 ```
 
 - Step2: Add new precompile we need go into the workspace directory
@@ -29,10 +49,23 @@ cd my-workspace
 oproller precompile new <precompile-name> <address-of-precompile>
 ```
 ```shell
-oproller precompile new my-precompile 0x1234
+oproller precompile new my-precompile 0xE11049cf6DFeB008e198d9c1155aEaA35b2e2Ba2
 ```
 
-- Step3: Build the precompile. Ensure that you  go to the workspace directory
+After that you will see the precompile file in the workspace directory. The structure of the workspace directory is as below:
+```
+my-workspace:
+    - precompile
+        - my-precompile
+            - ...
+            - go.mod
+        - op-geth
+            - ...
+            - go.mod
+        - go.work
+```
+
+- Step3: Build the precompile. Ensure that you  go to the precompile workspace directory (cd my-workspace/precompile)
 ```shell
 oproller precompile build
 ```
@@ -57,21 +90,62 @@ Please do not edit the package name and the module of precompile file. It will b
 
 ### Add new preinstall
 
-To develop the preinstall, we need to create the smart contract project to develop the preinstall. The preinstall is the smart contract that will be deployed to the blockchain to support the precompile.
-We can use the foundry or hardhat to create the project. After that we need to build the project and get the deploy bytecode of the smart contract. When we have the deploy bytecode, we can add the preinstall to the optimism following the steps below:
-
-- Step1: Generate the preinstall extension
+- Step1: Create new workspace
 ```shell
-oproller preinstall generate [name] [address] [hex_deployed_code]
+oproller init preinstall <workspace-name>
 ```
-- name: The name of the preinstall
-- address: The address of the preinstall
-- hex_deployed_code: The hex of the deployed code of the preinstall
-
-- Step2: Register the preinstall to the optimism project
 ```shell
-oproller preinstall register [path_to_preinstall_contract] [path_to_optimism]
+oproller init preinstall my-workspace
+```
+After that you will see the workspace directory in the current directory. The structure of the workspace directory is as below:
+```
+my-workspace:
+    - preinstall
+        - optimism
+            - ...
 ```
 
-- path_to_preinstall_contract: The path to the preinstall contract that you have generated from the step1
-- path_to_optimism: The path to the optimism project that you want to add the preinstall
+- Step2: Add new preinstall we need go into the workspace directory
+```shell
+cd my-workspace
+oproller preinstall create <preinstall-name>
+```
+```shell
+oproller preinstall create my-preinstall
+```
+
+This command will use foundry to create a new preinstall smartcontract template. After that you will see the preinstall file in the workspace directory. The structure of the workspace directory is as below:
+```
+my-workspace:
+    - preinstall
+        - optimism
+            - ...
+        - my-preinstall
+            - ...
+```
+
+- Step3: Build the preinstall. Ensure that you  go to the project of preinstall workspace directory (cd my-workspace/preinstall/my-preinstall)
+```shell
+cd my-workspace/preinstall/my-preinstall
+oproller preinstall build
+```
+
+- Step4: Register the preinstall into the preinstall list of the optimism. Ensure that you  go to the project of preinstall workspace directory (cd my-workspace/preinstall/my-preinstall)
+```shell
+cd my-workspace/preinstall/my-preinstall
+oproller preinstall register <address-of-preinstall> <contract-file:contract-name>
+```
+```shell
+oproller preinstall register 0xE11049cf6DFeB008e198d9c1155aEaA35b2e2Ba2 Counter.sol:Counter
+```
+
+- Step5: Deploy devnet to test the preinstall. Ensure that you  go to the project of optimism workspace directory (cd my-workspace/preinstall/optimism)
+```shell
+cd my-workspace/preinstall/optimism
+oproller preinstall devnet <command>
+```
+The <command> can be `up`, `down`, `clean`. The `up` command will deploy the devnet, `down` command will stop the devnet, `clean` command will remove the devnet. 
+
+```shell
+oproller preinstall devnet up
+```
